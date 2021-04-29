@@ -1,7 +1,7 @@
 #EnTree
 
 EnTree is a GUI enabled script to examine evolutionary changes in protein stability. It is tested on UCSF Chimera 1.14 (https://www.cgl.ucsf.edu/chimera/) installed Linux Mint 19.3. It also requires gedit, python kivy, perl-tk and pdb4amber (from AmberTools 18  https://ambermd.org/) or directly from GitHub (https://github.com/Amber-MD/pdb4amber) pdb4amber is only needed if an alignment file is used as the source of the PDB variants. 
-![image](/maestroGUI.png)
+![image](/entreeGUI.png)
 
 To run:
 python ENTREE.py
