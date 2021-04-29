@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mutation_experiment>
+    <type>stabilize</type>
+    <output>
+    </output>
+    <constraints>
+       <max_mutation>1</max_mutation>
+    </constraints>
+    <mutator type='ea'>
+         <npopulations>3</npopulations>
+         <ngenerations>200</ngenerations>
+         <population_size>100</population_size>
+         <mutation_rate>0.05</mutation_rate>
+         <migration_rate>0.01</migration_rate>
+    </mutator>
+</mutation_experiment>

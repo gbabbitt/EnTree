@@ -1,0 +1,13 @@
+branch_tip	branch_root
+1rex_LYSO	asr(1-2)
+var_LALBA	asr(1-2)
+var_LYZL1	asr(3-4)
+var_LYZL2	asr(3-4)
+var_LYZL4	asr(5-6)
+var_LYZL6	asr(5-6)
+var_SPACA3	asr(7-16)
+var_SPACA5	asr(8-9)
+var_SPACA5B	asr(8-9)
+asr(8-9)	asr(7-16)
+asr(3-4)	asr(11-15)
+asr(5-6)	asr(11-15)
