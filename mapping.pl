@@ -26,14 +26,13 @@ while ($filename = readdir DIR){ # loop through files
   }
 
 # prompt user 
-sleep(1);print "\nType PDB ID for reference protein or one of the variants (e.g. 1rex)\n\n";
+sleep(1);print "\nType PDB ID for reference protein OR one of the variants (e.g. 1rex)\n\n";
 my $pdbID = <STDIN>;
 chop($pdbID);
 sleep(1);print "\nType length of protein (i.e. number of sites in PDB file)\n\n";
 my $lengthID = <STDIN>;
 chop($lengthID);
 
-print "\nScale of ddG is YELLOW = NO EFFECT to RED = LARGE EFFECT\n\n";
 ###############################################################
 print("Preparing display...\n");
 print("close ChimeraX program to exit\n\n");
@@ -58,6 +57,6 @@ print CTL "transparency\t"."70\n";
 print CTL "background\t"."gray\n";
 close CTL;
 ##############################################################
-
+print "\nScale of ddG is YELLOW = NO EFFECT to RED = LARGE EFFECT\n\n";
 system "$chimerax_path"."ChimeraX color_by_attr_chimerax_protein.py\n";
-
+print "\nScale of ddG is YELLOW = NO EFFECT to RED = LARGE EFFECT\n\n";
