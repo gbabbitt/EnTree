@@ -3,6 +3,7 @@
 # Imports
 import getopt, sys # Allows for command line arguments
 import os
+import re
 import chimera
 from chimera import runCommand as rc
 
@@ -66,10 +67,25 @@ def make_mutants():
     start = int(start)
     end = int(end)+1
     Vnum = int(Vnum)
-
+    
+    # read MD ctl file
+    infile = open("paths.ctl", "r")
+    infile_lines = infile.readlines()
+    print len(infile_lines)
+    for x in range(len(infile_lines)):
+        infile_line = infile_lines[x]
+        print(infile_line)
+        infile_line_array = re.split('\s+', infile_line)
+        header = infile_line_array[0]
+        value = infile_line_array[1]
+        print(header)
+        print(value)
+        if(header == "maestro_path"):
+            PATHid = value
+            print("my path is",PATHid)
     for x in range(1,Vnum+1):
         mol = chimera.openModels.open(pdb_file)[0] # Opens molecule
-        rc('read ~/Desktop/evolMAESTRO/%s/variant%s.com' % (indir, x))
+        rc('read '+PATHid+'/%s/variant%s.com' % (indir, x))
         file_out.write('%s_variant%s_chain%s\n' % (rID, x, chain))
     # Close the file
     file_out.close()
