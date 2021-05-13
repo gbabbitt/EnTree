@@ -38,8 +38,8 @@ print("Preparing display...\n");
 print("close ChimeraX program to exit\n\n");
 # copy visualization support files to folder
 mkdir("ChimeraXvis");
-#copy("./pdb_mutants_final/final_$pdbID".".pdb", "ChimeraXvis/reference.pdb") || die "could not find ./pdb_mutants_final/final_$pdbID"."pdb\n";
-#copy("./attribute_files/attr_ddG_$pdbID"."_singlepoint.maestro.dat", "ChimeraXvis/attributeDGG.dat") || die "could not find ./attribute_files/attr_ddG_$pdbID"."_singlepoint.maestro.dat\n" ;
+copy("./pdb_mutants_final/$pdbID".".pdb", "ChimeraXvis/reference.pdb") || die "could not find ./pdb_mutants_final/$pdbID".".pdb\n";
+copy("./attribute_files/attr_ddG_$pdbID"."_singlepoint.maestro.dat", "ChimeraXvis/attributeDGG.dat") || die "could not find ./attribute_files/attr_ddG_$pdbID"."_singlepoint.maestro.dat\n" ;
 # create control file for visualization
 open(CTL, ">"."ChimeraXvis.ctl");
 print CTL "model\t"."#1\n";
