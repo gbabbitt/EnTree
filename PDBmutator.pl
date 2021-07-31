@@ -299,7 +299,7 @@ for (my $i = 0; $i < scalar @IN; $i++){
      # compare residues
      if ($ref_header =~ m/$fileID/){print "\nREF $ref_header\t"."$ref_sequence\n"."SEQ $header\t"."$sequence\n";
          my @refSEQ = split (//, $ref_sequence);my @SEQ = split (//, $sequence);
-         for(my $s = 0; $s < 50; $s++){
+         for(my $s = 0; $s < length($ref_sequence); $s++){
             $ref_letter = $refSEQ[$s];
             $seq_letter = $SEQ[$s];
             #print "$ref_letter\t"."$seq_letter\n";

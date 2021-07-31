@@ -48,8 +48,10 @@ for (my $jj = 0; $jj < scalar @IN; $jj++) {
     print "looking for $header\n";
     if ($header eq $test){$sequence = $sequence.$seq; print " building "."$sequence\n";}
 }
+if($header ne '' && $sequence ne ''){
 print OUTFILE ">$header\n";
 print OUTFILE "$sequence\n";
+}
 close IN;    
 }
 close OUTFILE;
