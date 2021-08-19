@@ -33,6 +33,23 @@ system "gedit $clustalID.aln";
 $varnum = <STDIN>;
 chop($varnum);
 
+$bootsYN = 'n';
+sleep(1);print "\n Do you want to bootstrap sample the mutations of each branch? (for weights and t-tests; enter y or n)\n\n";
+my $bootsYN = <STDIN>;
+chop($bootsYN);
+if ($bootsYN eq ''){$bootsYN = 'n';}
+if ($bootsYN eq 'Y'){$bootsYN = 'y';}
+if ($bootsYN eq 'N'){$bootsYN = 'n';}
+if ($bootsYN eq 'yes'){$bootsYN = 'y';}
+if ($bootsYN eq 'no'){$bootsYN = 'n';}
+if ($bootsYN eq 'YES'){$bootsYN = 'y';}
+if ($bootsYN eq 'NO'){$bootsYN = 'n';}
+if($bootsYN eq 'n'){goto HERE;}
+sleep(1);print "\nEnter number of bootstraps for sampling mutations on each branch\n\n";
+my $boots = <STDIN>;
+chop($boots);
+HERE:
+
 #$pdbID = "1rex";
 #$lengthID = 130;
 #$clustalID = "1rex_asr";
@@ -146,8 +163,11 @@ for (my $i = 0; $i < scalar @ALNlist; $i++){
 # collect mutational changes on each branch of guide tree
 open (OUTFILE, ">"."energy_trees/energy_changes.txt") || die " could not open output file\n";
 print OUTFILE "branch\t"."site\t"."change\t"."ddG\t"."dRMSF\n";
-open (OUTFILE2, ">"."energy_trees/branch_weights.txt") || die " could not open output file\n";
-print OUTFILE2 "branch\t"."ddG_weight\t"."dRMSF_weight\t"."significance *<0.05 **<0.01 ***<0.005\n";
+open (OUTFILE2, ">"."energy_trees/branch_weights_ddG.txt") || die " could not open output file\n";
+print OUTFILE2 "branch\t"."avgDDG_observed\t"."avgDDG_potential\t"."ddG_omega\t"."d_value\t"."effect_size(S,M*,L**,XL***)\n";
+open (OUTFILE3, ">"."energy_trees/branch_weights_dRMSF.txt") || die " could not open output file\n";
+print OUTFILE3 "branch\t"."avgDRMSF_observed\t"."avgDRMSF_potential\t"."dRMSF_omega\t"."d_value\t"."effect_size(S,M*,L**,XL***)\n";
+
 open (INFILE, "<"."energy_trees/myChanges.csv") || die " could not open changes list from MegaX\n";
 my @IN = <INFILE>;
 for (my $i = 0; $i < scalar @ALNlist; $i++){
@@ -186,18 +206,19 @@ for (my $ii = 0; $ii < scalar @IN; $ii++){
               $post = @mut[2];
               #print "maestro "."$head\t"."$position\t"."$target\t"."$replacement\t"."$ddG\t"."$site\t"."$mut\t"."$prior\t"."$post\n";
               if (abs($position - $site) <= 2 && $target eq $prior && $replacement eq $post && $ddG =~ m/\d/){   # collect obs ddG value for changes on branch
-                 #print "maestro "."$head\t"."$position\t"."$target\t"."$replacement\t"."$ddG\t"."$site\t"."$mut\t"."$prior\t"."$post\n";
+                 print "maestro "."$head\t"."$position\t"."$target\t"."$replacement\t"."$ddG\t"."$site\t"."$mut\t"."$prior\t"."$post\n";
                  $myDDG = $ddG; push(@avgDDG_observed, $ddG);}
               if (abs($position - $site) <= 2 && $ddG =~ m/\d/){   # collect avg ddG values for all possible matching site changes on branch
                  push(@avgDDG_potential, $ddG);}
               }
           close IN2;
           # compute dRMSF for each site/mutation on each branch                                                
+          #if ($branch eq '' || $branchbase eq ''){$dRMSF = 0;}
           #top of branch
-          open (IN3, "<"."energy_trees/$branch"."_fluct.txt") || die " could find corresponding fluctuation file\n";
+          open (IN3, "<"."energy_trees/$branch"."_fluct.txt"); # || die " could not find corresponding fluctuation file\n";
           my @IN3 = <IN3>;
           #bottom of branch
-          open (IN4, "<"."energy_trees/$branchbase"."_fluct.txt") || die " could find corresponding fluctuation file\n";
+          open (IN4, "<"."energy_trees/$branchbase"."_fluct.txt"); # || die " could not find corresponding fluctuation file\n";
           my @IN4 = <IN4>;
           for (my $k = 0; $k < scalar @IN3; $k++){
               my $IN3row = $IN3[$k];
@@ -229,6 +250,7 @@ $statSCORE = new Statistics::Descriptive::Full; # residue avg flux - reference
 $statSCORE->add_data (@avgDDG_observed);
 $avgDDG_observed = $statSCORE->mean();
 $numDDG_observed = $statSCORE->count();
+#if($numDDG_observed < $boots){$bootsYN = 'y';}
 print "sample size\t"."$numDDG_observed\n";
 print "avg observed ddG\t"."$avgDDG_observed\n";
 $statSCORE = new Statistics::Descriptive::Full; # residue avg flux - reference
@@ -238,21 +260,50 @@ print "sample size\t"."$numDDG_potential\n";
 # signif test
 open (STAT, ">"."energy_trees/$branch"."_stats_ddG_data.txt") or die "could not create stats file\n";
 print STAT "ddG\t"."type\n";
+@avgDDG_observed_sample = ();
 @avgDDG_potential_sample = ();
-for (my $i = 0; $i < scalar @avgDDG_observed; $i++){
+if ($bootsYN eq 'n'){
+for (my $i = 0; $i < scalar @avgDDG_observed; $i++){  
     $DDGobs = @avgDDG_observed[$i];
+    #print "$DDGobs\t"."obs\n";
     print STAT "$DDGobs\t"."obs\n";
-    $r = 1+rand($numDDG_potential-1); # random generator (with replacement)
-    $DDGpot = @avgDDG_potential[$r];
+    $r2 = 1+rand($numDDG_potential-1); # random generator (with replacement)
+    $DDGpot = @avgDDG_potential[$r2];
+    #print "$DDGpot\t"."rand\n";
     print STAT "$DDGpot\t"."rand\n";
     push (@avgDDG_potential_sample, $DDGpot);
+    }
+}
+if ($bootsYN eq 'y'){
+for (my $i = 0; $i < $boots; $i++){   
+    $r1 = 1+rand($numDDG_observed-1); # random generator (with replacement)
+    $DDGobs = @avgDDG_observed[$r1];
+    #print "$DDGobs\t"."obs\n";
+    print STAT "$DDGobs\t"."obs\n";
+    push (@avgDDG_observed_sample, $DDGobs);
+    $r2 = 1+rand($numDDG_potential-1); # random generator (with replacement)
+    $DDGpot = @avgDDG_potential[$r2];
+    #print "$DDGpot\t"."rand\n";
+    print STAT "$DDGpot\t"."rand\n";
+    push (@avgDDG_potential_sample, $DDGpot);
+    }
 }
 close STAT;
 # find avg ddG for sampled potential changes on each branch
 $statSCORE = new Statistics::Descriptive::Full; # residue avg flux - reference
 $statSCORE->add_data (@avgDDG_potential_sample);
 $avgDDG_potential = $statSCORE->mean();
+#print @avgDDG_potential_sample;
+#print "\n";
 print "avg potential ddG\t"."$avgDDG_potential\n";
+if ($bootsYN eq 'y'){
+$statSCORE = new Statistics::Descriptive::Full; # residue avg flux - reference
+$statSCORE->add_data (@avgDDG_observed_sample);
+$avgDDG_observed = $statSCORE->mean();
+#print @avgDDG_observed_sample;
+#print "\n";
+print "avg observed ddG\t"."$avgDDG_observed\n";     
+}
 # weight each branch for ddG  (wt = avg obs ddG / avg potential all-site ddG)
 $weightDDG = (($avgDDG_observed+0.0001)/($avgDDG_potential+0.0001));
 if (scalar @avgDDG_observed < 5){$weightDDG = 1;}
@@ -263,6 +314,7 @@ if (scalar @avgDDG_observed < 5){$weightDDG = 1;}
      if (scalar @avgDDG_observed < 5){goto SKIP1;}
      open (Rinput, "| R --vanilla")||die "could not start R command line\n";
      print Rinput "library('ggplot2')\n";
+     print Rinput "library('lsr')\n";
      print Rinput "data = read.table('energy_trees/$branch"."_stats_ddG_data.txt', header = TRUE)\n"; 
      $type_ddG = "data\$type"; # flux on reference residue
      $value_ddG = "data\$ddG"; # flux on query residue
@@ -270,9 +322,13 @@ if (scalar @avgDDG_observed < 5){$weightDDG = 1;}
      print Rinput "print(df)\n";
      print Rinput "mytest <- t.test(val~typ, data=df)\n";
      print Rinput "print(mytest)\n";
+     print Rinput "myeffect <- cohensD(val~typ, data=df)\n";
+     print Rinput "print(myeffect)\n";
      print Rinput "sink('energy_trees/$branch"."_statsresult_ddG_data.txt')\n";
      print Rinput "print(df)\n";
      print Rinput "print(mytest)\n";
+     print Rinput "myeffect <- cohensD(val~typ, data=df)\n";
+     print Rinput "print(myeffect)\n";
      print Rinput "sink()\n";
      print Rinput "q()\n";# quit R 
      print Rinput "n\n";# save workspace image?
@@ -289,17 +345,29 @@ for (my $i = 0; $i < scalar @IN; $i++){
     if($p_value < 0.01){$sig = "**";}
     if($p_value < 0.005){$sig = "***";}
 }
+for (my $i = 0; $i < scalar @IN; $i++){
+    my $INrow = @IN[$i];
+    print "$INrow\n";
+    my @INrow = split(/\s+/, $INrow);
+    $header = @INrow[0];
+    if($header eq "[1]"){$d_value = @INrow[1];}
+    $effect = "***"; $Dval = 1;
+    if($d_value < 0.8){$effect = "**"; $Dval = $d_value;}
+    if($d_value < 0.5){$effect = "*"; $Dval = $d_value;}
+    if($d_value < 0.2){$effect = ""; $Dval = $d_value;}
+}
 close IN;
 SKIP1:
 print "branch and ddG weight\n";
-print "$branch\t"."$weightDDG"."$sig\n";
-print OUTFILE2 "$branch\t"."$weightDDG"."$sig\t";
+print "$branch\t"."$weightDDG"."$sig\t"."$Dval\t"."$effect\t";
+print OUTFILE2 "$branch\t"."$avgDDG_observed\t"."$avgDDG_potential\t"."$weightDDG\t"."$Dval"."$effect\n";
 #################################################################################
 # find avg dRMSF for all potential changes on each branch
 $statSCORE = new Statistics::Descriptive::Full; # residue avg flux - reference
 $statSCORE->add_data (@avgDRMSF_observed);
 $avgDRMSF_observed = $statSCORE->mean();
 $numDRMSF_observed = $statSCORE->count();
+#if($numDRMSF_observed < $boots){$bootsYN = 'y';}
 print "sample size\t"."$numDRMSF_observed\n";
 print "avg observed dRMSF\t"."$avgDRMSF_observed\n";
 # find avg dRMSF for all potential changes on each branch
@@ -311,13 +379,29 @@ print "sample size\t"."$numDRMSF_potential\n";
 open (STAT, ">"."energy_trees/$branch"."_stats_dRMSF_data.txt") or die "could not create stats file\n";
 print STAT "dRMSF\t"."type\n";
 @avgDRMSF_potential_sample = ();
-for (my $i = 0; $i < scalar @avgDRMSF_observed; $i++){
+@avgDRMSF_observed_sample = ();
+#for (my $i = 0; $i < scalar @avgDRMSF_observed; $i++){
+if ($bootsYN eq 'n'){
+for (my $i = 0; $i < scalar @avgDRMSF_observed; $i++){     
     $DRMSFobs = @avgDRMSF_observed[$i];
     print STAT "$DRMSFobs\t"."obs\n";
-    $r = 1+rand($numDRMSF_potential-1); # random generator (with replacement)
-    $DRMSFpot = @avgDRMSF_potential[$r];
+    $r2 = 1+rand($numDRMSF_potential-1); # random generator (with replacement)
+    $DRMSFpot = @avgDRMSF_potential[$r2];
     print STAT "$DRMSFpot\t"."rand\n";
     push (@avgDRMSF_potential_sample, $DRMSFpot);
+    }
+}
+if ($bootsYN eq 'y'){
+for (my $i = 0; $i < $boots; $i++){     
+    $r1 = 1+rand($numDRMSF_observed-1); # random generator (with replacement)
+    $DRMSFobs = @avgDRMSF_observed[$r1];
+    print STAT "$DRMSFobs\t"."obs\n";
+    push (@avgDRMSF_observed_sample, $DRMSFobs);
+    $r2 = 1+rand($numDRMSF_potential-1); # random generator (with replacement)
+    $DRMSFpot = @avgDRMSF_potential[$r2];
+    print STAT "$DRMSFpot\t"."rand\n";
+    push (@avgDRMSF_potential_sample, $DRMSFpot);
+    }
 }
 close STAT;
 # find avg dRMSF for sampled potential changes on each branch
@@ -325,7 +409,12 @@ $statSCORE = new Statistics::Descriptive::Full; # residue avg flux - reference
 $statSCORE->add_data (@avgDRMSF_potential_sample);
 $avgDRMSF_potential = $statSCORE->mean();
 print "avg potential dRMSF\t"."$avgDRMSF_potential\n";
-
+if ($bootsYN eq 'y'){
+$statSCORE = new Statistics::Descriptive::Full; # residue avg flux - reference
+$statSCORE->add_data (@avgDRMSF_observed_sample);
+$avgDRMSF_observed = $statSCORE->mean();
+print "avg observed dRMSF\t"."$avgDRMSF_observed\n";     
+}
 # signif test     
 # weight each branch for dRMSF  (wt = avg obs dRMSF / avg potential all-site dRMSF)
 $weightDRMSF = (($avgDRMSF_observed+0.0001)/($avgDRMSF_potential+0.0001));
@@ -337,6 +426,7 @@ if (scalar @avgDRMSF_observed < 5){$weightDRMSF = 1;}
      if (scalar @avgDRMSF_observed < 5){goto SKIP2;}
      open (Rinput, "| R --vanilla")||die "could not start R command line\n";
      print Rinput "library('ggplot2')\n";
+     print Rinput "library('lsr')\n";
      print Rinput "data = read.table('energy_trees/$branch"."_stats_dRMSF_data.txt', header = TRUE)\n"; 
      $type_dRMSF = "data\$type"; # flux on reference residue
      $value_dRMSF = "data\$dRMSF"; # flux on query residue
@@ -344,9 +434,13 @@ if (scalar @avgDRMSF_observed < 5){$weightDRMSF = 1;}
      print Rinput "print(df)\n";
      print Rinput "mytest <- t.test(val~typ, data=df)\n";
      print Rinput "print(mytest)\n";
+     print Rinput "myeffect <- cohensD(val~typ, data=df)\n";
+     print Rinput "print(myeffect)\n";
      print Rinput "sink('energy_trees/$branch"."_statsresult_dRMSF_data.txt')\n";
      print Rinput "print(df)\n";
      print Rinput "print(mytest)\n";
+     print Rinput "myeffect <- cohensD(val~typ, data=df)\n";
+     print Rinput "print(myeffect)\n";
      print Rinput "sink()\n";
      print Rinput "q()\n";# quit R 
      print Rinput "n\n";# save workspace image?
@@ -363,11 +457,22 @@ for (my $i = 0; $i < scalar @IN; $i++){
     if($p_value < 0.01){$sig = "**";}
     if($p_value < 0.005){$sig = "***";}
 }
+for (my $i = 0; $i < scalar @IN; $i++){
+    my $INrow = @IN[$i];
+    print "$INrow\n";
+    my @INrow = split(/\s+/, $INrow);
+    $header = @INrow[0];
+    if($header eq "[1]"){$d_value = @INrow[1];}
+    $effect = "***"; $Dval = 1;
+    if($d_value < 0.8){$effect = "**"; $Dval = $d_value;}
+    if($d_value < 0.5){$effect = "*"; $Dval = $d_value;}
+    if($d_value < 0.2){$effect = ""; $Dval = $d_value;}
+}
 close IN;
 SKIP2:     
 print "branch and dRMSF weight\n";
-print "$branch\t"."$weightDRMSF"."$sig\n";
-print OUTFILE2 "$weightDRMSF"."$sig\n";
+print "$branch\t"."$weightDRMSF"."$sig\t"."$Dval\t"."$effect\n";
+print OUTFILE3 "$branch\t"."$avgDRMSF_observed\t"."$avgDRMSF_potential\t"."$weightDRMSF\t"."$Dval"."$effect\n";
 #################################################################################
 }
 close OUTFILE;
@@ -375,7 +480,7 @@ close OUTFILE2;
 close INFILE;
 #################################################################################
 ### make energy weighted trees
-system "gedit energy_trees/branch_weights.txt energy_trees/myTree.nwk $clustalID.aln";
+system "gedit energy_trees/branch_weights_ddG.txt energy_trees/branch_weights_dRMSF.txt energy_trees/myTree.nwk $clustalID.aln";
 print "\nmultiply branch lengths in tree by either the ddg or dRMSF weights provided\n";
 print "\nresave then open and view your trees in MEGAX or https://icytree.org\n\n";
 system "megax";
